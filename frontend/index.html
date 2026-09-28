@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shortly — URL Shortener</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      min-height: 100vh;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem 1rem;
+      color: #1a1a1a;
+    }
+
+    .container {
+      background: white;
+      border-radius: 1.25rem;
+      padding: 2.5rem;
+      max-width: 600px;
+      width: 100%;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.25rem;
+      color: #1a1a1a;
+    }
+
+    .subtitle {
+      color: #666;
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 1rem;
+    }
+
+    input[type="url"] {
+      flex: 1;
+      min-width: 200px;
+      padding: 0.85rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 0.6rem;
+      font-size: 1rem;
+      transition: border-color 0.2s;
+      font-family: inherit;
+    }
+
+    input[type="url"]:focus,
+    input[type="text"]:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 0.85rem 1rem;
+      border: 2px solid #e0e0e0;
+      border-radius: 0.6rem;
+      font-size: 1rem;
+      font-family: inherit;
+      margin-bottom: 1rem;
+    }
+
+    button {
+      padding: 0.85rem 1.5rem;
+      border: none;
+      border-radius: 0.6rem;
+      background: linear-gradient(135deg, #667eea, #764ba2);
+      color: white;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.1s, opacity 0.2s;
+      font-family: inherit;
+    }
+
+    button:hover:not(:disabled) { transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(0); }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+    .advanced-toggle {
+      background: none;
+      color: #667eea;
+      padding: 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin-bottom: 1rem;
+    }
+
+    .advanced-toggle:hover { text-decoration: underline; transform: none; }
+
+    .result {
+      margin-top: 1.5rem;
+      padding: 1.25rem;
+      background: #f8f9ff;
+      border-left: 4px solid #667eea;
+      border-radius: 0.6rem;
+      display: none;
+    }
+
+    .result.error {
+      background: #fff5f5;
+      border-left-color: #e53e3e;
+    }
+
+    .result.show { display: block; }
+
+    .result-label {
+      font-size: 0.8rem;
+      color: #666;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .short-url-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .short-url {
+      font-family: 'SF Mono', Monaco, monospace;
+      font-size: 1rem;
+      color: #667eea;
+      word-break: break-all;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .copy-btn {
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+      background: #667eea;
+    }
+
+    .recent {
+      margin-top: 2rem;
+      padding-top: 2rem;
+      border-top: 1px solid #eee;
+    }
+
+    .recent h2 {
+      font-size: 1rem;
+      margin-bottom: 1rem;
+      color: #666;
+      font-weight: 500;
+    }
+
+    .recent-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.6rem 0;
+      font-size: 0.9rem;
+      gap: 1rem;
+      border-bottom: 1px solid #f5f5f5;
+    }
+
+    .recent-item:last-child { border-bottom: none; }
+
+    .recent-url {
+      color: #667eea;
+      text-decoration: none;
+      font-family: 'SF Mono', Monaco, monospace;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      flex: 1;
+    }
+
+    .recent-url:hover { text-decoration: underline; }
+
+    .recent-original {
+      color: #999;
+      font-size: 0.8rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 40%;
+    }
+
+    .spinner {
+      display: inline-block;
+      width: 1rem;
+      height: 1rem;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin-right: 0.4rem;
+      vertical-align: middle;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Shortly</h1>
+    <p class="subtitle">Short links, zero servers. Built with AWS Lambda + DynamoDB.</p>
+
+    <div class="form-row">
+      <input
+        type="url"
+        id="url-input"
+        placeholder="https://example.com/very/long/url"
+        autocomplete="off"
+      />
+      <button id="shorten-btn">Shorten</button>
+    </div>
+
+    <button class="advanced-toggle" id="advanced-toggle">
+      + Add custom code (optional)
+    </button>
+
+    <input
+      type="text"
+      id="custom-code"
+      placeholder="mylink"
+      style="display: none;"
+      autocomplete="off"
+    />
+
+    <div class="result" id="result">
+      <div class="result-label" id="result-label">Your short URL</div>
+      <div class="short-url-row">
+        <a class="short-url" id="short-url" href="#" target="_blank"></a>
+        <button class="copy-btn" id="copy-btn">Copy</button>
+      </div>
+    </div>
+
+    <div class="recent" id="recent" style="display: none;">
+      <h2>Recent links</h2>
+      <div id="recent-list"></div>
+    </div>
+  </div>
+
+  <script>
+    // Terraform substitutes this single variable at deploy time.
+    // All other $ in this file are plain JavaScript — no backtick templates.
+    const API_URL = "${api_url}";
+
+    const urlInput = document.getElementById("url-input");
+    const shortenBtn = document.getElementById("shorten-btn");
+    const advancedToggle = document.getElementById("advanced-toggle");
+    const customCode = document.getElementById("custom-code");
+    const result = document.getElementById("result");
+    const resultLabel = document.getElementById("result-label");
+    const shortUrl = document.getElementById("short-url");
+    const copyBtn = document.getElementById("copy-btn");
+    const recent = document.getElementById("recent");
+    const recentList = document.getElementById("recent-list");
+
+    advancedToggle.addEventListener("click", function () {
+      var showing = customCode.style.display !== "none";
+      customCode.style.display = showing ? "none" : "block";
+      advancedToggle.textContent = showing
+        ? "+ Add custom code (optional)"
+        : "\u2212 Hide custom code";
+    });
+
+    async function shorten() {
+      var url = urlInput.value.trim();
+      var code = customCode.value.trim();
+
+      if (!url) return;
+
+      shortenBtn.disabled = true;
+      shortenBtn.innerHTML = '<span class="spinner"></span>Working\u2026';
+      result.classList.remove("show", "error");
+
+      try {
+        var body = { url: url };
+        if (code) body.code = code;
+
+        var res = await fetch(API_URL + "/shorten", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        var data = await res.json();
+
+        if (!res.ok) {
+          showResult("Error", data.error || "Something went wrong", true);
+          return;
+        }
+
+        showResult("Your short URL", data.short_url, false);
+        shortUrl.href = data.short_url;
+        addToRecent(data.short_url, data.original_url);
+        urlInput.value = "";
+        customCode.value = "";
+      } catch (err) {
+        console.error(err);
+        showResult("Error", "Could not reach the API", true);
+      } finally {
+        shortenBtn.disabled = false;
+        shortenBtn.textContent = "Shorten";
+      }
+    }
+
+    function showResult(label, text, isError) {
+      resultLabel.textContent = label;
+      shortUrl.textContent = text;
+      shortUrl.href = isError ? "#" : text;
+      copyBtn.style.display = isError ? "none" : "inline-block";
+      result.classList.add("show");
+      result.classList.toggle("error", isError);
+    }
+
+    copyBtn.addEventListener("click", async function () {
+      try {
+        await navigator.clipboard.writeText(shortUrl.textContent);
+        copyBtn.textContent = "Copied!";
+        setTimeout(function () { copyBtn.textContent = "Copy"; }, 1500);
+      } catch (e) {
+        copyBtn.textContent = "Failed";
+      }
+    });
+
+    function addToRecent(shortUrl, originalUrl) {
+      var list = JSON.parse(localStorage.getItem("recent") || "[]");
+      list.unshift({ shortUrl: shortUrl, originalUrl: originalUrl, at: Date.now() });
+      var trimmed = list.slice(0, 5);
+      localStorage.setItem("recent", JSON.stringify(trimmed));
+      renderRecent();
+    }
+
+    function renderRecent() {
+      var list = JSON.parse(localStorage.getItem("recent") || "[]");
+      if (list.length === 0) {
+        recent.style.display = "none";
+        return;
+      }
+      recent.style.display = "block";
+      recentList.innerHTML = list.map(function (item) {
+        return '<div class="recent-item">' +
+               '<a class="recent-url" href="' + item.shortUrl + '" target="_blank">' + item.shortUrl + '</a>' +
+               '<span class="recent-original" title="' + item.originalUrl + '">' + item.originalUrl + '</span>' +
+               '</div>';
+      }).join("");
+    }
+
+    shortenBtn.addEventListener("click", shorten);
+    urlInput.addEventListener("keypress", function (e) {
+      if (e.key === "Enter") shorten();
+    });
+
+    renderRecent();
+  </script>
+</body>
+</html>
