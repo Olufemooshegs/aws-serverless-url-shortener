@@ -4,8 +4,9 @@ A production-pattern URL shortener built with Terraform and Python.
 Supports custom codes, click tracking, TTL-based expiry, and 301 redirects.
 
 ## Architecture
-Browser → S3 (static site) → API Gateway → Lambda (Python) → DynamoDB
+# URL Shortener — Serverless on AWS
 
+![Architecture](docs/architecture.png)
 text
 
 ## Tech Stack
@@ -83,7 +84,8 @@ text
 │   ├── handlers.py         # One function per endpoint
 │   └── index.py            # Router
 └── frontend/index.html     # Static site with fetch() API calls
-Deployment
+'''
+## Deployment
 1. Bootstrap Terraform backend (run once)
 bash
 cd terraform/bootstrap  # from the visitor-counter project
@@ -110,7 +112,8 @@ Cleanup
 bash
 cd terraform/environments/dev
 terraform destroy
-Design Decisions
+Design Decisions'''
+
 Base62 random codes — 62^7 ≈ 3.5 trillion codes; collisions practically impossible
 
 Atomic conditional writes — attribute_not_exists(code) prevents duplicate codes under concurrency
